@@ -182,13 +182,13 @@ fun Soal2() {
                 verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
-                    .background(color = Color.White, shape = RoundedCornerShape(20.dp))
+                    .background(color = Color.White, shape = RoundedCornerShape(24.dp))
                     .width(325.dp)
                     .padding(vertical = 24.dp, horizontal = 16.dp)
             ) {
                 Text(
                     text = "Give Me Your Coin",
-                    color = Color.DarkGray,
+                    color = Color.Black,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -202,15 +202,14 @@ fun Soal2() {
                 Button(
                     onClick = { buyUpgrade() },
                     enabled = isEligibleForUpgrade,
-                    shape = RoundedCornerShape(13.dp),
-                    modifier = Modifier.width(275.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF4CAF50),
                         contentColor = Color.White,
-                        disabledContainerColor = Color(0xFFBDBDBD),
-                        disabledContentColor = Color.White
+                        disabledContainerColor = Color.Gray,
+                        disabledContentColor = Color.White.copy(alpha = 0.7f)
                     ),
-                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 17.dp)
+                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
                 ) {
                     val remainingCoins = priceToUpgrade - totalCurrency
                     Text(
@@ -219,7 +218,7 @@ fun Soal2() {
                         } else {
                             "Find ${numberFormatter.format(remainingCoins)} more coins"
                         },
-                        fontSize = 19.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Medium
                     )
                 }

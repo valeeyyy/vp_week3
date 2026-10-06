@@ -114,7 +114,7 @@ private fun HomeMenu(onBeginTap: () -> Unit) {
             onClick = onBeginTap, 
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFFBAC8D1),
-                contentColor = Color.Black,
+                contentColor = Color.DarkGray,
             )
         ) {
             Text("Start Game")
