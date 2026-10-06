@@ -67,7 +67,7 @@ fun Soal2() {
     val context = LocalContext.current
     
     val bgResId = remember { context.resources.getIdentifier("cat_background", "drawable", context.packageName) }
-    val catAaaResId = remember { context.resources.getIdentifier("cat_AAA", "drawable", context.packageName) }
+    val catAaaResId = remember { context.resources.getIdentifier("cat_aaa", "drawable", context.packageName) }
     val catMmmResId = remember { context.resources.getIdentifier("cat_mmm", "drawable", context.packageName) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -182,18 +182,18 @@ fun Soal2() {
                 verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
-                    .background(color = Color.White, shape = RoundedCornerShape(24.dp))
+                    .background(color = Color.White, shape = RoundedCornerShape(20.dp))
                     .width(325.dp)
                     .padding(vertical = 24.dp, horizontal = 16.dp)
             ) {
                 Text(
                     text = "Give Me Your Coin",
-                    color = Color.Black,
+                    color = Color.DarkGray,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Next upgrade: +${numberFormatter.format(currencyPerTap * 1.5f)} coins per tap",
+                    text = "Next upgrade: ${numberFormatter.format(currencyPerTap * 1.5f)} coins per tap",
                     color = Color.Black.copy(alpha = 0.7f),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Normal,
@@ -202,14 +202,15 @@ fun Soal2() {
                 Button(
                     onClick = { buyUpgrade() },
                     enabled = isEligibleForUpgrade,
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(13.dp),
+                    modifier = Modifier.width(275.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF4CAF50),
                         contentColor = Color.White,
-                        disabledContainerColor = Color.Gray,
-                        disabledContentColor = Color.White.copy(alpha = 0.7f)
+                        disabledContainerColor = Color(0xFFBDBDBD),
+                        disabledContentColor = Color.White
                     ),
-                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 17.dp)
                 ) {
                     val remainingCoins = priceToUpgrade - totalCurrency
                     Text(
@@ -218,7 +219,7 @@ fun Soal2() {
                         } else {
                             "Find ${numberFormatter.format(remainingCoins)} more coins"
                         },
-                        fontSize = 16.sp,
+                        fontSize = 19.sp,
                         fontWeight = FontWeight.Medium
                     )
                 }
