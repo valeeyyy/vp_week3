@@ -151,7 +151,6 @@ private fun MenuScreen(records: List<Long>) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Kelompokkan elemen menu utama agar bersatu dan berada persis di tengah
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
