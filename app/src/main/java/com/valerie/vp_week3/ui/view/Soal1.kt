@@ -28,7 +28,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,13 +63,12 @@ data class Verdict(val text: String, val bg: Color, val pic: Int)
 @Composable
 fun Soal1View() {
     var phase by remember { mutableStateOf(Phase.Menu) }
-    var round by remember { mutableIntStateOf(1) }
 
     val records by remember { mutableStateOf(mutableListOf<Long>()) }
     var goTimestamp by remember { mutableLongStateOf(0L) }
     var latestTime by remember { mutableLongStateOf(0L) }
 
-    LaunchedEffect(key1 = phase, key2 = round) {
+    LaunchedEffect(key1 = phase) {
         if (phase == Phase.Waiting) {
             val pause = Random.nextLong(500, 4500)
             delay(pause.milliseconds)
@@ -83,7 +81,6 @@ fun Soal1View() {
     }
 
     fun restart() {
-        round = 1
         records.clear()
         phase = Phase.Menu
     }
@@ -136,7 +133,8 @@ fun Soal1View() {
                 if (records.last() == FOUL) {
                     FoulScreen(records)
                 } else {
-                    RoundScreen(round - 1, records.last(), records)
+                    val completedTrials = records.count { it != FOUL }
+                    RoundScreen(completedTrials, records.last(), records)
                 }
             }
             Phase.Summary -> SummaryScreen(records)
@@ -150,13 +148,20 @@ private fun MenuScreen(records: List<Long>) {
         modifier = Modifier
             .fillMaxSize()
             .background(color = Color(0xFF6FCDDC)),
-        verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
+        verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = "Reaction", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
-        Icon(Icons.Default.FlashOn, contentDescription = "Flash Icon", modifier = Modifier.size(120.dp), tint = Color.White)
-        Text(text = "Test", color = Color.White, fontSize = 26.sp)
-        Text(text = "Click to Start", color = Color.White.copy(alpha = 0.8f), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        // Kelompokkan elemen menu utama agar bersatu dan berada persis di tengah
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(text = "Reaction", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+            Icon(Icons.Default.FlashOn, contentDescription = "Flash Icon", modifier = Modifier.size(140.dp), tint = Color.White)
+            Text(text = "Test", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(8.dp))
+            Text(text = "Click to Start", color = Color.White.copy(alpha = 0.8f), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        }
 
         if (records.isNotEmpty()) {
             Spacer(Modifier.height(40.dp))
@@ -177,9 +182,9 @@ private fun WaitScreen() {
         Text(text = "Get Ready", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(24.dp))
         Icon(Icons.Default.Warning, contentDescription = "Warning Icon", tint = Color.White, modifier = Modifier.size(120.dp))
-        Spacer(Modifier.height(24.dp))
-        Text(text = "Wait for the green light...", color = Color.White, fontSize = 20.sp)
-        Text(text = "DON'T CLICK YET", color = Color.White, fontSize = 16.sp, modifier = Modifier.padding(top = 14.dp))
+        Spacer(Modifier.height(40.dp))
+        Text(text = "Wait for the green light...", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Medium)
+        Text(text = "DON'T CLICK YET!", color = Color.White, fontSize = 16.sp, modifier = Modifier.padding(top = 30.dp))
     }
 }
 
@@ -188,14 +193,14 @@ private fun GoScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(color = Color(0xFF2ECC71)),
-        verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
+            .background(color = Color(0xFF4CAF51)),
+        verticalArrangement = Arrangement.spacedBy(35.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(text = "GO!", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
         Icon(Icons.AutoMirrored.Filled.DirectionsRun, contentDescription = "Warning Icon", tint = Color.White, modifier = Modifier.size(120.dp))
-        Text(text = "CLICK NOW!", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Normal)
-        Text(text = "TAP AS FAST AS YOU CAN", color = Color.White, fontSize = 16.sp)
+        Text(text = "CLICK NOW!", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Medium)
+        Text(text = "TAP AS FAST AS YOU CAN!", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -208,31 +213,34 @@ private fun FoulScreen(records: List<Long>) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text = "FAIL!", color = Color.White, fontSize = 48.sp, fontWeight = FontWeight.Bold)
+        Text(text = "FAIL!", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(40.dp))
         Icon(Icons.Default.ThumbDown, contentDescription = "Thumbs Down", tint = Color.White, modifier = Modifier.size(120.dp))
+        Spacer(Modifier.height(35.dp))
         Text(
-            text = "You clicked too early.\nTRY TO READ THE RULE BRO",
-            color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Normal, textAlign = TextAlign.Center
+            text = "You clicked too early, TRY TO \nREAD THE RULE BRO",
+            color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center
         )
-        Text(text = "Click to continue...", color = Color.White.copy(alpha = 0.7f), fontSize = 16.sp)
+        Spacer(Modifier.height(30.dp))
+        Text(text = "TRY AGAIN", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(20.dp))
         ScoreCard(times = records)
     }
 }
 
 @Composable
-private fun RoundScreen(roundNo: Int, elapsed: Long, records: List<Long>) {
+private fun RoundScreen(currentTrial: Int, elapsed: Long, records: List<Long>) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF4CAF51)),
-        verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
+        verticalArrangement = Arrangement.spacedBy(35.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(text = "Trial $roundNo Complete!", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+        Text(text = "Trial $currentTrial Complete!", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
         Icon(Icons.Default.CheckCircle, contentDescription = "Warning Icon", tint = Color.White, modifier = Modifier.size(120.dp))
         Text(text = "Time: ${elapsed}ms", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        Text(text = "Continue to Trial ${roundNo + 1}", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Light)
+        Text(text = "Continue to Trial ${currentTrial + 1}", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Medium)
         ScoreCard(times = records)
     }
 }
@@ -243,17 +251,17 @@ private fun SummaryScreen(records: List<Long>) {
     val avg = if (validTimes.isNotEmpty()) validTimes.average().toLong() else 0L
 
     val verdict = when (avg) {
-        in 1..179 -> Verdict("DANG YOU ARE SO FAST BRO!", Color(0xFF2ECC71), R.drawable.thumb_up)
-        in 180..280 -> Verdict("YOUR REFLEX IS GOOD", Color(0xFF3498DB), R.drawable.salute)
-        in 281..450 -> Verdict("MEH LIKE OTHER PERSON", Color(0xFFF39C12), R.drawable.standard)
-        else -> Verdict("YOU LIKE A SNAIL BRO", Color(0xFFE74C3C), R.drawable.thumb_down)
+        in 1..179 -> Verdict("DANG YOU ARE SO \nFAST BRO!", Color(0xFF2ECC71), R.drawable.thumb_up)
+        in 180..280 -> Verdict("YOUR REFLEX IS \nGOOD", Color(0xFF3498DB), R.drawable.salute)
+        in 281..450 -> Verdict("MEH LIKE OTHER \nPERSON", Color(0xFFF39C12), R.drawable.standard)
+        else -> Verdict("YOU LIKE A SNAIL \nBRO", Color(0xFFEB6337), R.drawable.thumb_down)
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(verdict.bg),
-        verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
+        verticalArrangement = Arrangement.spacedBy(35.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
@@ -271,9 +279,8 @@ private fun SummaryScreen(records: List<Long>) {
                 .padding(top = 20.dp)
                 .size(148.dp)
         )
-        Text(text = "Average: ${avg}ms", color = Color.White, fontSize = 22.sp)
-        Text(text = "Click to Start New Test", color = Color.White.copy(alpha = 0.8f), fontSize = 16.sp)
-        Spacer(Modifier.height(10.dp))
+        Text(text = "Average: ${avg}ms", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text(text = "Click to Start New Test", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Medium)
         ScoreCard(times = records, average = avg)
     }
 }
@@ -322,7 +329,7 @@ private fun ScoreCard(times: List<Long>, average: Long? = null) {
                     "Average Score",
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
-                    color = Color.DarkGray
+                    color = Color(0xFF176FD1)
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
