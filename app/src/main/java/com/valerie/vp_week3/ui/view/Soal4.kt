@@ -47,7 +47,7 @@ private enum class Action(val emojiStr: String, val uiName: String) {
 private enum class Outcome(val displayStr: String) {
     VICTORY("You Win!"),
     DEFEAT("You Lose"),
-    TIE("It's a Draw")
+    TIE("Draw")
 }
 
 private fun evaluateRound(userMove: Action, botMove: Action): Outcome {
@@ -141,7 +141,7 @@ private fun ScoreBoard(userPts: Int, botPts: Int) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            "🧑 $userPts - $botPts 🤖",
+            "🧑 $userPts — $botPts 🤖",
             fontSize = 24.sp,
             fontWeight = FontWeight.Light,
             textAlign = TextAlign.Center
@@ -181,8 +181,6 @@ private fun ActiveMatch(userPts: Int, botPts: Int, onPtsUpdate: (Int, Int) -> Un
         Spacer(Modifier.weight(1f))
 
         if (isShowingResult) {
-            Text(roundState?.displayStr ?: "", fontSize = 32.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(32.dp))
             Row(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -191,6 +189,8 @@ private fun ActiveMatch(userPts: Int, botPts: Int, onPtsUpdate: (Int, Int) -> Un
                 Text("VS", fontSize = 32.sp)
                 Text(botMove?.emojiStr ?: "❔", fontSize = 64.sp)
             }
+            Spacer(Modifier.height(32.dp))
+            Text(roundState?.displayStr ?: "", fontSize = 32.sp, fontWeight = FontWeight.Normal)
         } else {
             // Selection UI
             Text(
@@ -262,8 +262,7 @@ private fun StartScreen(onTapStart: () -> Unit) {
         Text(
             "Rock • Paper • Scissors",
             textAlign = TextAlign.Center,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
+            fontSize = 24.sp
         )
         Spacer(Modifier.height(64.dp))
         Button(
@@ -274,7 +273,7 @@ private fun StartScreen(onTapStart: () -> Unit) {
             ),
             modifier = Modifier.size(width = 200.dp, height = 60.dp)
         ) {
-            Text("Start", fontSize = 18.sp)
+            Text("Start", fontSize = 18.sp, fontWeight = FontWeight.Normal)
         }
         Spacer(Modifier.weight(1f))
     }
@@ -291,34 +290,33 @@ private fun EndScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 248.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .padding(horizontal = 16.dp, vertical = 64.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Spacer(Modifier.weight(1f))
+        ScoreBoard(userPts = userPts, botPts = botPts)
+        
+        Spacer(Modifier.weight(1f))
+        
         Text(
-            if (userPts > botPts) {
-                "You Win the Match!"
-            } else {
-                "You Lose the Match"
-            }, fontSize = 32.sp, fontWeight = FontWeight.Bold
-        )
-        Spacer(Modifier.height(24.dp))
-        Text(
-            "Final Score: $userPts - $botPts",
-            fontSize = 24.sp,
-            textAlign = TextAlign.Center,
-            fontWeight = FontWeight.Light
+            text = when {
+                userPts > botPts -> "You Win the Match!"
+                userPts < botPts -> "You Lose the Match"
+                else -> "It's a Draw"
+            },
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Normal
         )
         Spacer(Modifier.height(16.dp))
         Text(
             "Best Score: $highestPts",
             fontSize = 18.sp,
             textAlign = TextAlign.Center,
-            fontWeight = FontWeight.Light,
+            fontWeight = FontWeight.Normal,
             color = Color.Gray
         )
         Spacer(Modifier.height(48.dp))
-        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             Button(
                 onClick = onRetry,
                 colors = ButtonDefaults.buttonColors(
@@ -327,11 +325,10 @@ private fun EndScreen(
                 ),
                 modifier = Modifier
                     .height(60.dp)
-                    .width(100.dp)
+                    .width(120.dp)
             ) {
-                Text("Restart")
+                Text("Restart", fontWeight = FontWeight.Normal)
             }
-            Spacer(Modifier.height(16.dp))
             Button(
                 onClick = onQuit,
                 colors = ButtonDefaults.buttonColors(
@@ -340,11 +337,12 @@ private fun EndScreen(
                 ),
                 modifier = Modifier
                     .height(60.dp)
-                    .width(100.dp)
+                    .width(120.dp)
             ) {
-                Text("Exit")
+                Text("Exit", fontWeight = FontWeight.Normal)
             }
         }
+        Spacer(Modifier.weight(1.5f))
     }
 }
 
