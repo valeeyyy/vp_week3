@@ -1,8 +1,11 @@
 package com.valerie.vp_week3.ui.view
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,10 +22,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,24 +40,37 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import java.math.RoundingMode
 import java.text.DecimalFormat
 
 @Composable
 fun Soal2() {
-    var totalCurrency by remember { mutableFloatStateOf(0f) }
-    var currencyPerTap by remember { mutableFloatStateOf(1f) }
-    var priceToUpgrade by remember { mutableIntStateOf(10) }
+    var totalCurrency by rememberSaveable { mutableDoubleStateOf(0.0) }
+    var currencyPerTap by rememberSaveable { mutableDoubleStateOf(1.0) }
+    var priceToUpgrade by rememberSaveable { mutableIntStateOf(10) }
     var isTapping by remember { mutableStateOf(false) }
-    var tapCounter by remember { mutableFloatStateOf(0f) }
+    var tapCounter by remember { mutableIntStateOf(0) }
 
-    val numberFormatter = DecimalFormat("#.#")
+    val catInteraction = remember { MutableInteractionSource() }
+    val isCatPressed by catInteraction.collectIsPressedAsState()
+    val isMouthOpen = isCatPressed || isTapping
+
+    val coinFormatter = remember { DecimalFormat("#.#").apply { roundingMode = RoundingMode.FLOOR } }
+    val valueFormatter = remember { DecimalFormat("#.#").apply { roundingMode = RoundingMode.HALF_UP } }
+    val shortfallFormatter = remember { DecimalFormat("#.#").apply { roundingMode = RoundingMode.CEILING } }
     val isEligibleForUpgrade = totalCurrency >= priceToUpgrade
+
+    fun tapCat() {
+        totalCurrency += currencyPerTap
+        isTapping = true
+        tapCounter++
+    }
 
     fun buyUpgrade() {
         if (totalCurrency >= priceToUpgrade) {
             totalCurrency -= priceToUpgrade
             priceToUpgrade *= 2
-            currencyPerTap *= 1.5f
+            currencyPerTap *= 1.5
         }
     }
 
@@ -111,13 +128,13 @@ fun Soal2() {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = numberFormatter.format(totalCurrency),
+                    text = coinFormatter.format(totalCurrency),
                     color = Color.Green,
                     fontSize = 48.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${numberFormatter.format(currencyPerTap)} coins per tap",
+                    text = "${valueFormatter.format(currencyPerTap)} coins per tap",
                     color = Color.White,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold
@@ -135,7 +152,7 @@ fun Soal2() {
                     fontWeight = FontWeight.Bold
                 )
                 
-                val currentCatImg = if (isTapping) catAaaResId else catMmmResId
+                val currentCatImg = if (isMouthOpen) catAaaResId else catMmmResId
                 
                 if (currentCatImg != 0) {
                     Image(
@@ -146,11 +163,10 @@ fun Soal2() {
                             .width(200.dp)
                             .height(200.dp)
                             .clip(RoundedCornerShape(16.dp))
-                            .clickable {
-                                totalCurrency += currencyPerTap
-                                isTapping = true
-                                tapCounter++
-                            }
+                            .clickable(
+                                interactionSource = catInteraction,
+                                indication = LocalIndication.current
+                            ) { tapCat() }
                     )
                 } else {
                     Box(
@@ -159,19 +175,18 @@ fun Soal2() {
                             .height(200.dp)
                             .clip(RoundedCornerShape(16.dp))
                             .background(Color.White)
-                            .clickable {
-                                totalCurrency += currencyPerTap
-                                isTapping = true
-                                tapCounter++
-                            },
+                            .clickable(
+                                interactionSource = catInteraction,
+                                indication = LocalIndication.current
+                            ) { tapCat() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(if (isTapping) "🙀" else "😺", fontSize = 100.sp)
+                        Text(if (isMouthOpen) "🙀" else "😺", fontSize = 100.sp)
                     }
                 }
                 
                 Text(
-                    text = if (isTapping) "Meow!" else "Purr~",
+                    text = if (isMouthOpen) "Meow!" else "Purr~",
                     color = Color.White.copy(alpha = 0.8f),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold
@@ -193,7 +208,7 @@ fun Soal2() {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Next upgrade: ${numberFormatter.format(currencyPerTap * 1.5f)} coins per tap",
+                    text = "Next upgrade: +${valueFormatter.format(currencyPerTap * 1.5)} coins per tap",
                     color = Color.Black.copy(alpha = 0.7f),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Normal,
@@ -216,7 +231,7 @@ fun Soal2() {
                         text = if (isEligibleForUpgrade) {
                             "Pay for $priceToUpgrade coins"
                         } else {
-                            "Find ${numberFormatter.format(remainingCoins)} more coins"
+                            "Find ${shortfallFormatter.format(remainingCoins)} more coins"
                         },
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium

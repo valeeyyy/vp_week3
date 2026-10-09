@@ -1,5 +1,6 @@
 package com.valerie.vp_week3.ui.view
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -19,11 +20,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -39,6 +37,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -169,17 +171,22 @@ fun Soal2Bonus() {
                             snackbarHostState.showSnackbar(message)
                         }
                     },
-                    modifier = Modifier.size(72.dp),
-                    shape = RoundedCornerShape(22.dp),
+                    modifier = Modifier.size(65.dp),
+                    shape = RoundedCornerShape(20.dp),
                     containerColor = AccentBlue,
                     contentColor = DarkInk,
                     elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Add,
-                        contentDescription = "Simpan jurnal",
-                        modifier = Modifier.size(32.dp)
-                    )
+                    Canvas(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .semantics { contentDescription = "Simpan jurnal" }
+                    ) {
+                        val stroke = 4.dp.toPx()
+                        val mid = size.width / 2
+                        drawLine(DarkInk, Offset(0f, mid), Offset(size.width, mid), stroke, StrokeCap.Butt)
+                        drawLine(DarkInk, Offset(mid, 0f), Offset(mid, size.height), stroke, StrokeCap.Butt)
+                    }
                 }
             }
         }

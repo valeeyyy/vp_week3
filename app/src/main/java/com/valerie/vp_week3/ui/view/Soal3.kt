@@ -1,5 +1,6 @@
 package com.valerie.vp_week3.ui.view
 
+import android.os.SystemClock
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.Close
@@ -28,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -37,19 +40,29 @@ import kotlinx.coroutines.delay
 import kotlin.random.Random
 import kotlin.math.max
 
-private enum class PlayType {
-    TINT,
+private const val ROUND_TIME_MS = 5000L
+private const val MAX_MISTAKES = 3
+
+private val GameButtonModifier = Modifier.height(64.dp).widthIn(min = 120.dp)
+
+private enum class Mode {
+    COLOR,
+    TEXT
+}
+
+private enum class Choice {
+    INK,
     WORD
 }
 
-private enum class MatchPhase {
+private enum class GameState {
     Home,
-    Preparation,
-    Active,
-    Finished
+    Countdown,
+    Running,
+    GameOver
 }
 
-private enum class Palette(val hexColor: Color) {
+private enum class ColorName(val hexColor: Color) {
     RED(Color.Red),
     BLUE(Color.Blue),
     GREEN(Color.Green),
@@ -61,37 +74,37 @@ private enum class Palette(val hexColor: Color) {
 
 @Composable
 fun Soal3() {
-    var currentPhase by remember { mutableStateOf(MatchPhase.Home) }
+    var currentPhase by remember { mutableStateOf(GameState.Home) }
     var lastScore by remember { mutableIntStateOf(0) }
     var highestScore by rememberSaveable { mutableIntStateOf(0) }
 
     when (currentPhase) {
-        MatchPhase.Home -> {
-            HomeMenu { currentPhase = MatchPhase.Preparation }
+        GameState.Home -> {
+            HomeMenu { currentPhase = GameState.Countdown }
         }
 
-        MatchPhase.Preparation -> {
+        GameState.Countdown -> {
             ReadySetGo(
-                onFinish = { currentPhase = MatchPhase.Active }
+                onFinish = { currentPhase = GameState.Running }
             )
         }
 
-        MatchPhase.Active -> {
+        GameState.Running -> {
             ActiveMatch(
                 onMatchEnd = { finalPts ->
                     lastScore = finalPts
                     highestScore = max(highestScore, finalPts)
-                    currentPhase = MatchPhase.Finished
+                    currentPhase = GameState.GameOver
                 }
             )
         }
 
-        MatchPhase.Finished -> {
+        GameState.GameOver -> {
             PostGameScreen(
                 achievedScore = lastScore,
                 topScore = highestScore,
-                onRetry = { currentPhase = MatchPhase.Active },
-                onQuit = { currentPhase = MatchPhase.Home }
+                onRetry = { currentPhase = GameState.Countdown },
+                onQuit = { currentPhase = GameState.Home }
             )
         }
     }
@@ -107,7 +120,9 @@ private fun HomeMenu(onBeginTap: () -> Unit) {
         Text(
             "Welcome \n to \n Color Word Matching",
             textAlign = TextAlign.Center,
-            fontSize = 24.sp
+            fontSize = 26.sp,
+            fontWeight = FontWeight.Light,
+            color = Color.Black
         )
 
         Button(
@@ -117,7 +132,10 @@ private fun HomeMenu(onBeginTap: () -> Unit) {
                 contentColor = Color.DarkGray,
             )
         ) {
-            Text("Start Game")
+            Text(
+                text = "Start Game",
+                fontSize = 18.sp
+            )
         }
     }
 }
@@ -146,71 +164,62 @@ private fun ReadySetGo(onFinish: () -> Unit) {
         Text(
             text = displayTxt,
             textAlign = TextAlign.Center,
-            fontSize = 72.sp
+            fontSize = 40.sp,
+            fontWeight = FontWeight.Light
         )
     }
 }
 
 @Composable
 private fun ActiveMatch(onMatchEnd: (pts: Int) -> Unit) {
-    var challengeType by remember { mutableStateOf(PlayType.TINT) }
-    var remainingTime by remember { mutableLongStateOf(5000L) }
+    var challengeType by remember { mutableStateOf(Mode.entries.random()) }
+    var remainingTime by remember { mutableLongStateOf(ROUND_TIME_MS) }
     var corrects by remember { mutableIntStateOf(0) }
     var mistakes by remember { mutableIntStateOf(0) }
+    var roundNo by remember { mutableIntStateOf(0) }
 
-    var labelStr by remember { mutableStateOf(Palette.RED) }
-    var labelColor by remember { mutableStateOf(Palette.BLUE) }
-    var leftIsLabel by remember { mutableStateOf(true) }
+    var labelStr by remember { mutableStateOf(ColorName.entries.random()) }
+    var labelColor by remember { mutableStateOf(ColorName.entries.filter { it != labelStr }.random()) }
+    var leftIsLabel by remember { mutableStateOf(Random.nextBoolean()) }
 
-    val populateRound = {
-        var nextLabel: Palette
-        var nextColor: Palette
-        do {
-            nextLabel = Palette.entries.random()
-            nextColor = Palette.entries.random()
-        } while (nextLabel == nextColor)
-
+    fun populateRound() {
+        val nextLabel = ColorName.entries.random()
         labelStr = nextLabel
-        labelColor = nextColor
-        challengeType = if (Random.nextBoolean()) PlayType.TINT else PlayType.WORD
+        labelColor = ColorName.entries.filter { it != nextLabel }.random()
+        challengeType = Mode.entries.random()
         leftIsLabel = Random.nextBoolean()
-        remainingTime = 5000L
+        remainingTime = ROUND_TIME_MS
+        roundNo++
     }
 
-    val verifySelection = { picked: Palette ->
-        val expected = if (challengeType == PlayType.TINT) labelColor else labelStr
+    fun submitAnswer(forRound: Int, picked: Choice?) {
+        if (forRound != roundNo || mistakes >= MAX_MISTAKES) return
+
+        val expected = if (challengeType == Mode.COLOR) Choice.INK else Choice.WORD
         if (picked == expected) {
             corrects++
         } else {
             mistakes++
         }
 
-        if (mistakes >= 3) {
+        if (mistakes >= MAX_MISTAKES) {
             onMatchEnd(corrects)
         } else {
             populateRound()
         }
     }
 
-    LaunchedEffect(Unit) {
-        populateRound()
-        corrects = 0
-        mistakes = 0
+    LaunchedEffect(key1 = roundNo) {
+        val startedAt = SystemClock.elapsedRealtime()
+        remainingTime = ROUND_TIME_MS
+        while (remainingTime > 0L) {
+            delay(100L)
+            remainingTime = max(0L, ROUND_TIME_MS - (SystemClock.elapsedRealtime() - startedAt))
+        }
+        submitAnswer(roundNo, null)
     }
 
-    LaunchedEffect(key1 = remainingTime) {
-        if (remainingTime > 0L) {
-            delay(100L)
-            remainingTime -= 100L
-        } else {
-            mistakes++
-            if (mistakes >= 3) {
-                onMatchEnd(corrects)
-            } else {
-                populateRound()
-            }
-        }
-    }
+    val shownRound = roundNo
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -225,9 +234,10 @@ private fun ActiveMatch(onMatchEnd: (pts: Int) -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "Mode : ${if(challengeType == PlayType.TINT) "COLOR" else "TEXT"}",
+                "Mode : ${challengeType.name}",
                 textAlign = TextAlign.Center,
-                fontSize = 24.sp
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Light
             )
             Row(
                 horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
@@ -246,7 +256,8 @@ private fun ActiveMatch(onMatchEnd: (pts: Int) -> Unit) {
                     Text(
                         "$corrects",
                         textAlign = TextAlign.Center,
-                        fontSize = 24.sp
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Light
                     )
                 }
                 Row(
@@ -260,9 +271,10 @@ private fun ActiveMatch(onMatchEnd: (pts: Int) -> Unit) {
                         modifier = Modifier.size(28.dp)
                     )
                     Text(
-                        "$mistakes/3",
+                        "$mistakes/$MAX_MISTAKES",
                         textAlign = TextAlign.Center,
-                        fontSize = 24.sp
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Light
                     )
                 }
             }
@@ -273,10 +285,11 @@ private fun ActiveMatch(onMatchEnd: (pts: Int) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             Text(
-                "Time Left : ${remainingTime / 1000} s",
+                "${(remainingTime + 999) / 1000} s",
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
-                fontSize = 24.sp
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Light
             )
             Text(
                 text = labelStr.name,
@@ -284,7 +297,7 @@ private fun ActiveMatch(onMatchEnd: (pts: Int) -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 fontSize = 48.sp,
                 color = labelColor.hexColor,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Light
             )
         }
 
@@ -300,18 +313,18 @@ private fun ActiveMatch(onMatchEnd: (pts: Int) -> Unit) {
             )
             
             if (leftIsLabel) {
-                Button(onClick = { verifySelection(labelStr) }, colors = btnColor) {
-                    Text(labelStr.name)
+                Button(onClick = { submitAnswer(shownRound, Choice.WORD) }, modifier = GameButtonModifier, colors = btnColor) {
+                    Text(labelStr.name, fontWeight = FontWeight.Normal)
                 }
-                Button(onClick = { verifySelection(labelColor) }, colors = btnColor) {
-                    Text(labelColor.name)
+                Button(onClick = { submitAnswer(shownRound, Choice.INK) }, modifier = GameButtonModifier, colors = btnColor) {
+                    Text(labelColor.name, fontWeight = FontWeight.Normal)
                 }
             } else {
-                Button(onClick = { verifySelection(labelColor) }, colors = btnColor) {
-                    Text(labelColor.name)
+                Button(onClick = { submitAnswer(shownRound, Choice.INK) }, modifier = GameButtonModifier, colors = btnColor) {
+                    Text(labelColor.name, fontWeight = FontWeight.Normal)
                 }
-                Button(onClick = { verifySelection(labelStr) }, colors = btnColor) {
-                    Text(labelStr.name)
+                Button(onClick = { submitAnswer(shownRound, Choice.WORD) }, modifier = GameButtonModifier, colors = btnColor) {
+                    Text(labelStr.name, fontWeight = FontWeight.Normal)
                 }
             }
         }
@@ -348,7 +361,11 @@ private fun PostGameScreen(achievedScore: Int, topScore: Int, onRetry: () -> Uni
                 contentColor = Color.Black
             )
         ) {
-            Text("Restart Game")
+            Text(
+                text = "Restart Game",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Normal
+            )
         }
         Spacer(Modifier.height(16.dp))
         Button(
@@ -358,7 +375,11 @@ private fun PostGameScreen(achievedScore: Int, topScore: Int, onRetry: () -> Uni
                 contentColor = Color.Black
             )
         ) {
-            Text("Exit")
+            Text(
+                text = "Exit",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Normal
+            )
         }
     }
 }

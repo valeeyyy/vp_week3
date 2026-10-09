@@ -1,6 +1,5 @@
 package com.valerie.vp_week3.ui.view
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -29,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -59,18 +59,16 @@ private enum class Phase {
 
 data class Verdict(val text: String, val bg: Color, val pic: Int)
 
-@SuppressLint("MutableCollectionMutableState")
 @Composable
 fun Soal1View() {
     var phase by remember { mutableStateOf(Phase.Menu) }
 
-    val records by remember { mutableStateOf(mutableListOf<Long>()) }
+    val records = remember { mutableStateListOf<Long>() }
     var goTimestamp by remember { mutableLongStateOf(0L) }
-    var latestTime by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(key1 = phase) {
         if (phase == Phase.Waiting) {
-            val pause = Random.nextLong(500, 4500)
+            val pause = Random.nextLong(500, 4501)
             delay(pause.milliseconds)
 
             if (phase == Phase.Waiting) {
@@ -85,11 +83,6 @@ fun Soal1View() {
         phase = Phase.Menu
     }
 
-    fun moveOn() {
-        val validCount = records.count { it != FOUL }
-        phase = if (validCount == ROUNDS_NEEDED) Phase.Summary else Phase.Recap
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -100,23 +93,25 @@ fun Soal1View() {
                     }
 
                     Phase.Recap -> {
-                        if (records.lastOrNull() == FOUL) {
-                            records.removeAt(records.lastIndex)
-                            phase = Phase.Menu
-                        } else {
-                            phase = Phase.Waiting
+                        phase = when {
+                            records.lastOrNull() != FOUL -> Phase.Waiting
+                            records.size >= ROUNDS_NEEDED -> Phase.Summary
+                            else -> Phase.Menu
                         }
                     }
 
                     Phase.Waiting -> {
-                        records.add(FOUL)
-                        moveOn()
+                        if (records.size < ROUNDS_NEEDED) {
+                            records.add(FOUL)
+                            phase = Phase.Recap
+                        }
                     }
 
                     Phase.Go -> {
-                        latestTime = System.currentTimeMillis() - goTimestamp
-                        records.add(latestTime)
-                        moveOn()
+                        if (records.size < ROUNDS_NEEDED) {
+                            records.add(System.currentTimeMillis() - goTimestamp)
+                            phase = if (records.size == ROUNDS_NEEDED) Phase.Summary else Phase.Recap
+                        }
                     }
 
                     Phase.Summary -> {
@@ -133,8 +128,7 @@ fun Soal1View() {
                 if (records.last() == FOUL) {
                     FoulScreen(records)
                 } else {
-                    val completedTrials = records.count { it != FOUL }
-                    RoundScreen(completedTrials, records.last(), records)
+                    RoundScreen(records.size, records.last(), records)
                 }
             }
             Phase.Summary -> SummaryScreen(records)
@@ -249,10 +243,11 @@ private fun SummaryScreen(records: List<Long>) {
     val validTimes = records.filter { it != FOUL }
     val avg = if (validTimes.isNotEmpty()) validTimes.average().toLong() else 0L
 
-    val verdict = when (avg) {
-        in 1..179 -> Verdict("DANG YOU ARE SO \nFAST BRO!", Color(0xFF2ECC71), R.drawable.thumb_up)
-        in 180..280 -> Verdict("YOUR REFLEX IS \nGOOD", Color(0xFF3498DB), R.drawable.salute)
-        in 281..450 -> Verdict("MEH LIKE OTHER \nPERSON", Color(0xFFF39C12), R.drawable.standard)
+    val verdict = when {
+        validTimes.isEmpty() -> Verdict("YOU LIKE A SNAIL \nBRO", Color(0xFFEB6337), R.drawable.thumb_down)
+        avg < 180 -> Verdict("DANG YOU ARE SO \nFAST BRO!", Color(0xFF2ECC71), R.drawable.salute)
+        avg < 280 -> Verdict("YOUR REFLEX IS \nGOOD", Color(0xFF3498DB), R.drawable.thumb_up)
+        avg < 450 -> Verdict("MEH LIKE OTHER \nPERSON", Color(0xFFF39C12), R.drawable.standard)
         else -> Verdict("YOU LIKE A SNAIL \nBRO", Color(0xFFEB6337), R.drawable.thumb_down)
     }
 

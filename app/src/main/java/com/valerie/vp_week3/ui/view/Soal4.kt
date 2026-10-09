@@ -24,6 +24,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -32,99 +35,124 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlin.math.max
 
-private enum class MatchStatus {
-    Menu,
-    Playing,
-    Finished
+private const val BEST_OF = 5
+private const val POINTS_TO_WIN = BEST_OF / 2 + 1
+
+private enum class State {
+    INITIAL,
+    PICK,
+    REVEAL,
+    FINISHED
 }
 
-private enum class Action(val emojiStr: String, val uiName: String) {
-    STONE("✊", "ROCK"),
-    SHEET("✋", "PAPER"),
+private enum class Rps(val emojiStr: String, val uiName: String) {
+    ROCK("✊", "ROCK"),
+    PAPER("✋", "PAPER"),
     SCISSOR("✌️", "SCISSORS");
+
+    fun beats(other: Rps): Boolean = when (this) {
+        ROCK -> other == SCISSOR
+        PAPER -> other == ROCK
+        SCISSOR -> other == PAPER
+    }
 }
 
-private enum class Outcome(val displayStr: String) {
-    VICTORY("You Win!"),
-    DEFEAT("You Lose"),
-    TIE("Draw")
+private enum class Result(val displayStr: String) {
+    WIN("You Win!"),
+    LOSE("You Lose"),
+    DRAW("Draw")
 }
 
-private fun evaluateRound(userMove: Action, botMove: Action): Outcome {
-    if (userMove == botMove) {
-        return Outcome.TIE
-    }
-
-    return when (userMove) {
-        Action.STONE ->
-            if (botMove == Action.SCISSOR) {
-                Outcome.VICTORY
-            } else {
-                Outcome.DEFEAT
-            }
-
-        Action.SHEET -> if (botMove == Action.STONE) {
-            Outcome.VICTORY
-        } else {
-            Outcome.DEFEAT
-        }
-
-        Action.SCISSOR -> if (botMove == Action.SHEET) {
-            Outcome.VICTORY
-        } else {
-            Outcome.DEFEAT
-        }
-    }
+private fun evaluateRound(userMove: Rps, botMove: Rps): Result = when {
+    userMove == botMove -> Result.DRAW
+    userMove.beats(botMove) -> Result.WIN
+    else -> Result.LOSE
 }
 
 @Composable
 fun Soal4() {
-    var status by remember { mutableStateOf(MatchStatus.Menu) }
+    var status by rememberSaveable { mutableStateOf(State.INITIAL) }
     var userPts by rememberSaveable { mutableIntStateOf(0) }
     var botPts by rememberSaveable { mutableIntStateOf(0) }
-    var highestPts by rememberSaveable { mutableIntStateOf(0) }
-    val pointsNeeded = 3
+    var highestPts by rememberSaveable { mutableStateOf<Int?>(null) }
+
+    var userMove by rememberSaveable { mutableStateOf<Rps?>(null) }
+    var botMove by rememberSaveable { mutableStateOf<Rps?>(null) }
+    var roundState by rememberSaveable { mutableStateOf<Result?>(null) }
+    var shuffledActions by remember { mutableStateOf(Rps.entries.shuffled()) }
+
+    fun startRound() {
+        userMove = null
+        botMove = null
+        roundState = null
+        shuffledActions = Rps.entries.shuffled()
+        status = State.PICK
+    }
+
+    fun startMatch() {
+        userPts = 0
+        botPts = 0
+        startRound()
+    }
+
+    fun pickMove(move: Rps) {
+        if (status != State.PICK) return
+
+        val cpuMove = Rps.entries.random()
+        val result = evaluateRound(move, cpuMove)
+
+        userMove = move
+        botMove = cpuMove
+        roundState = result
+        when (result) {
+            Result.WIN -> userPts++
+            Result.LOSE -> botPts++
+            Result.DRAW -> Unit
+        }
+        status = State.REVEAL
+    }
+
+    if (status == State.REVEAL) {
+        LaunchedEffect(Unit) {
+            delay(700)
+            if (userPts >= POINTS_TO_WIN || botPts >= POINTS_TO_WIN) {
+                val diff = userPts - botPts
+                highestPts = max(highestPts ?: diff, diff)
+                status = State.FINISHED
+            } else {
+                startRound()
+            }
+        }
+    }
 
     when (status) {
-        MatchStatus.Menu -> {
-            StartScreen(
-                onTapStart = {
-                    userPts = 0
-                    botPts = 0
-                    status = MatchStatus.Playing
-                }
-            )
+        State.INITIAL -> {
+            StartScreen(onTapStart = { startMatch() })
         }
 
-        MatchStatus.Playing -> {
+        State.PICK, State.REVEAL -> {
             ActiveMatch(
                 userPts = userPts,
                 botPts = botPts,
-                onPtsUpdate = { newU, newB ->
-                    userPts = newU
-                    botPts = newB
-                    if (userPts >= pointsNeeded || botPts >= pointsNeeded) {
-                        highestPts = max(highestPts, userPts)
-                        status = MatchStatus.Finished
-                    }
-                }
+                isShowingResult = status == State.REVEAL,
+                userMove = userMove,
+                botMove = botMove,
+                roundState = roundState,
+                shuffledActions = shuffledActions,
+                onPick = { pickMove(it) }
             )
         }
 
-        MatchStatus.Finished -> {
+        State.FINISHED -> {
             EndScreen(
                 userPts = userPts,
                 botPts = botPts,
-                highestPts = highestPts,
-                onRetry = {
-                    userPts = 0
-                    botPts = 0
-                    status = MatchStatus.Playing
-                },
+                highestPts = highestPts ?: 0,
+                onRetry = { startMatch() },
                 onQuit = {
                     userPts = 0
                     botPts = 0
-                    status = MatchStatus.Menu
+                    status = State.INITIAL
                 }
             )
         }
@@ -147,7 +175,7 @@ private fun ScoreBoard(userPts: Int, botPts: Int) {
             textAlign = TextAlign.Center
         )
         Text(
-            "Best of 5",
+            "Best of $BEST_OF",
             fontSize = 18.sp,
             fontWeight = FontWeight.Light,
             textAlign = TextAlign.Center
@@ -156,21 +184,16 @@ private fun ScoreBoard(userPts: Int, botPts: Int) {
 }
 
 @Composable
-private fun ActiveMatch(userPts: Int, botPts: Int, onPtsUpdate: (Int, Int) -> Unit) {
-    var userMove by remember { mutableStateOf<Action?>(null) }
-    var botMove by remember { mutableStateOf<Action?>(null) }
-    var roundState by remember { mutableStateOf<Outcome?>(null) }
-    var isShowingResult by remember { mutableStateOf(false) }
-
-    val shuffledActions = remember(isShowingResult) { Action.entries.shuffled() }
-
-    if (isShowingResult) {
-        LaunchedEffect(Unit) {
-            delay(700)
-            isShowingResult = false
-        }
-    }
-
+private fun ActiveMatch(
+    userPts: Int,
+    botPts: Int,
+    isShowingResult: Boolean,
+    userMove: Rps?,
+    botMove: Rps?,
+    roundState: Result?,
+    shuffledActions: List<Rps>,
+    onPick: (Rps) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -183,14 +206,22 @@ private fun ActiveMatch(userPts: Int, botPts: Int, onPtsUpdate: (Int, Int) -> Un
         if (isShowingResult) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.semantics(mergeDescendants = true) {
+                    contentDescription = "You picked ${userMove?.uiName}, computer picked ${botMove?.uiName}"
+                }
             ) {
                 Text(userMove?.emojiStr ?: "❔", fontSize = 64.sp)
                 Text("VS", fontSize = 32.sp)
                 Text(botMove?.emojiStr ?: "❔", fontSize = 64.sp)
             }
             Spacer(Modifier.height(32.dp))
-            Text(roundState?.displayStr ?: "", fontSize = 32.sp, fontWeight = FontWeight.Normal)
+            Text(
+                roundState?.displayStr ?: "",
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Normal,
+                modifier = Modifier.semantics { contentDescription = "Round result: ${roundState?.displayStr}" }
+            )
         } else {
             // Selection UI
             Text(
@@ -216,28 +247,14 @@ private fun ActiveMatch(userPts: Int, botPts: Int, onPtsUpdate: (Int, Int) -> Un
             ) {
                 shuffledActions.forEach { act ->
                     Button(
-                        onClick = {
-                            val move1 = act
-                            val move2 = Action.entries.toTypedArray().random()
-                            val state = evaluateRound(move1, move2)
-
-                            userMove = move1
-                            botMove = move2
-                            roundState = state
-                            isShowingResult = true
-
-                            var addedUserPts = userPts
-                            var addedBotPts = botPts
-                            if (state == Outcome.VICTORY) addedUserPts++
-                            if (state == Outcome.DEFEAT) addedBotPts++
-                            onPtsUpdate(addedUserPts, addedBotPts)
-                        },
+                        onClick = { onPick(act) },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFBAC8D1),
                             contentColor = Color.Black,
                         ),
                         modifier = Modifier
                             .height(40.dp)
+                            .semantics { contentDescription = "Pick ${act.uiName}" }
                     ) {
                         Text("${act.emojiStr} ${act.uiName}", fontSize = 10.sp)
                     }
@@ -262,7 +279,8 @@ private fun StartScreen(onTapStart: () -> Unit) {
         Text(
             "Rock • Paper • Scissors",
             textAlign = TextAlign.Center,
-            fontSize = 24.sp
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Light
         )
         Spacer(Modifier.height(64.dp))
         Button(
@@ -305,7 +323,7 @@ private fun EndScreen(
                 else -> "It's a Draw"
             },
             fontSize = 32.sp,
-            fontWeight = FontWeight.Normal
+            fontWeight = FontWeight.Light
         )
         Spacer(Modifier.height(16.dp))
         Text(
